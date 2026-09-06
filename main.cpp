@@ -1,23 +1,32 @@
 #include <iostream>
-#include <chrono>
+#include <mutex>
 #include <thread>
+// TOPIC: Mutex in C++ Threading | Why use Mutex | What is Race condition and How to solve it? | What is Critical Section
 
-//JOIN
-// Once a thread is started, we call join to wait for it to finish.
-// DETACH
-// This is used to detach newly created thread from the parent thread
-void run(int count){
-    while (count-- > 0){
-        std::cout << count << " Arch btw!\n";
-    }
-    std::this_thread::sleep_for((std::chrono::seconds(5)));
-    std::cout << "thread finished\n";
+// Mutex: Mutual Exclusion
+// Race condition is a situation where two or more threads/process happened to change a common data at the same time.
+// If there is a race condition then we have to protect it and the protected section is called critical section/region.
+
+// MUTEX:
+// Mutex is used to avoid race condition.
+// We use lock(), unlock() on mutex to avoid race condition.
+
+int myAmount{};
+std::mutex m;
+
+void addMoney(){
+    m.lock();
+    ++myAmount; // Critical region
+    m.unlock();
 }
-int main(){
 
-    std::thread t1(run, 10);
-    std::cout << "main()\n";
-    t1.detach();
-    std::cout << "main() after\n";
+int main(){
+    std::thread t1(addMoney);
+    std::thread t2(addMoney);
+
+    t1.join();
+    t2.join();
+
+    std::cout << myAmount << "\n";
     return 0;
 }
