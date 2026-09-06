@@ -1,27 +1,23 @@
 #include <iostream>
-#include <thread>
 #include <chrono>
+#include <thread>
 
-class Base{
-    public:
-        void run(int x){
-            while (x-- > 0){
-                std::cout << x << "\n";
-            }
-        }
-};
+//JOIN
+// Once a thread is started, we call join to wait for it to finish.
+// DETACH
+// This is used to detach newly created thread from the parent thread
+void run(int count){
+    while (count-- > 0){
+        std::cout << count << " Arch btw!\n";
+    }
+    std::this_thread::sleep_for((std::chrono::seconds(5)));
+    std::cout << "thread finished\n";
+}
+int main(){
 
-
-
-int main(int argc, char *argv[]){
-    auto start_time = std::chrono::high_resolution_clock::now();
-    Base b;
-    std::thread t(&Base::run, &b, 1000000);
-    t.join();
-    auto stop_time = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(stop_time - start_time);
-
-    std::cout << "s: " << duration.count()/1000 << std::endl;
-
+    std::thread t1(run, 10);
+    std::cout << "main()\n";
+    t1.detach();
+    std::cout << "main() after\n";
     return 0;
 }
