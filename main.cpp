@@ -1,58 +1,60 @@
 #include <iostream>
-#include <mutex>
 #include <thread>
-// TOPIC: Mutex in C++ Threading | Why use Mutex | What is Race condition and How to solve it? | What is Critical Section
+#include <mutex>
+#include <chrono>
 
-// Mutex: Mutual Exclusion
-// Race condition is a situation where two or more threads/process happened to change a common data at the same time.
-// If there is a race condition then we have to protect it and the protected section is called critical section/region.
+// std::try_lock() in c++20 Threading
+// std::try_lock() tries to lock all the lockable objects passed in it one by one in given order.
+// Syntax: std::try_lock(m1, m2, m3, m4, m5, ..., mn);
 
-// MUTEX:
-// Mutex is used to avoid race condition.
-// We use lock(), unlock() on mutex to avoid race condition.
+// On success this function returns -1 otherwise it will return 0-based mutex index number which it could not lock.
+// If it fails to lock any of the mutex then it will release all the mutex it locked before.
+// If a call to try_lcok results in an exception, unlock is called for any locked objects before rethrowing
 
-// std::mutex::try_lock() on Mutex in Threading
+int x{}, y{};
+std::mutex m1, m2;
 
-// try_lock() Tries to lock the mutex. Returns immediately. On successful lock acquisition returns true otherwise returns false.
-// If try_lock() is not able to lock mutex, then it doesn't get blocked that's why it is called non-blocking.
-// If try_lock() is called again by the same thread which owns the mutex, the behaviour is undefined.
-// It is a dead lock situation with undefined behaviour. (if you want to be able to lock the same mutex by the same thread
-// more than one time then go for recursive mutex)
+void seconds_work(int seconds){
+    std::this_thread::sleep_for(std::chrono::seconds(seconds));
+}
 
-int counter{};
-int thread1{};
-int thread2{};
-std::mutex mtx;
-void increaseTheCounterFor100000Time1(){
-    for (int i{}; i < 100000; ++i){
-        if (mtx.try_lock()){
-            ++thread1;
-            ++counter;
-            mtx.unlock();
-        }
+void xy_increment(int& x_y, std::mutex& m, const char* desc){
+    for (int i{}; i < 5; ++i){
+        m.lock();
+        ++x_y;
+        std::cout << desc << " " << x_y << "\n";
+        m.unlock();
+        seconds_work(1);
     }
 }
-void increaseTheCounterFor100000Time2(){
-    for (int i{}; i < 100000; ++i){
-        if (mtx.try_lock()){
-            ++thread2;
-            ++counter;
-            mtx.unlock();
+
+void consume_xy(){
+    int useCount{5};
+    int x_y_sum{};
+    while(useCount){
+        int lockResult = std::try_lock(m1, m2);
+        if (lockResult == -1){
+            if (x && y){
+                --useCount;
+                x_y_sum += x + y;
+                x = y = 0;
+                std::cout <<  "x + y : " << x_y_sum << "\n";
+            }
+            m1.unlock();
+            m2.unlock();
         }
     }
 }
 
 
 int main(){
-    std::thread t1(increaseTheCounterFor100000Time1);
-    std::thread t2(increaseTheCounterFor100000Time2);
+    std::thread t1(xy_increment, std::ref(x), std::ref(m1), "x");
+    std::thread t2(xy_increment, std::ref(y), std::ref(m2), "y");
+    std::thread t3(consume_xy);
 
     t1.join();
     t2.join();
-
-    std::cout << "thread1: " << thread1 << std::endl;
-    std::cout << "thread2: " << thread2 << std::endl;
-    std::cout << "counter could increase upto: " << counter << "\n";
+    t3.join();
     return 0;
 }
 // There are so many try_lock function
