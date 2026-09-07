@@ -1,50 +1,45 @@
-//Topic: Timed Mutex In C++ Threading (std::timed_mutex)
-// We have learneed Mutex, Race Condition, Critical Section
-// Notes:
-// std::timed_mutex is blocked till timeout_time or the lock is aquired and returns true if success
-// otherwise false.
-// Member Function:
-// a. lock
-// b. try_lock
-// c. try_lock_for   ---\ These two functions makes it different for mutex.
-// d. try_lock_until ---/
-// e. unlock
+// TOPIC: Recursive Mutex in C++ (std::recursive_mutex);
 
-// Examples: try_lock_for();
-// Waits until specific timeout_duration has elapsed or the lock is aquired, whichever comes first.
-// On successful lock acquisition returns true, otherwise returns false.
+// Notes:
+// 0. It is same as mutex, but same thread can lock mutex multiple times using recursive mutex.
+// 1. If thread T1 first call lock/try_lock on recursive mutex m1, then m1 is locked by T1, now
+//    as T1 is running in recursion T1 cn call lock/try_lock any number of times.
+// 2. But if T1 have aquired 10 times lock/try_lock on mutex m1, then thread T1 will have to unlock
+//    it 10 times otherwise no other thread will be able to lock mutex m1.
+//    It means recursive_mutex keeps count how many times it was locked, so it should be unlocked the
+//    same amount of time.
+// 3. The maximum number of times we can lock a recursive_mutex is not defined, but when that reaches,
+//    if we call lock it will return std::system_error OR if we call try_lock() then it will return false.
+
+// BOTTOM LINE;
+// 0. It is similar to mutex but have extra facility that it can be locked multiple times by the same thread
+// 1. If we can avoid recursive mutex then we should because it brings overhead to the system.
+// 2. It can be used in loops also.
 
 #include <iostream>
 #include <thread>
 #include <mutex>
-#include <chrono>
 
-int myAmount{};
-std::timed_mutex m;
+// Example: with recursion
 
-void increment(int id){
-    auto now = std::chrono::steady_clock::now();
-    if(m.try_lock_until(now + std::chrono::seconds(2))){
-        ++myAmount;
-        std::this_thread::sleep_for(std::chrono::seconds(1));
-        std::cout << "Thread " << id << " Entered\n";
-        m.unlock();
-    }
-    else{
-        std::cout << "Thread " << id << " Couldn't Enter\n";
-    }
+std::recursive_mutex m1;
+int buffer = 0;
+
+void recursion(char c, int loopFor){
+    if (loopFor < 0) return;
+
+    m1.lock();
+    std::cout << c << " " << buffer++ << std::endl;
+    recursion(c, --loopFor);
+    m1.unlock();
 }
 
 int main(){
-
-    std::thread t1(increment, 1);
-    std::thread t2(increment, 2);
-
+    std::thread t1(recursion, '0', 10);
+    std::thread t2(recursion, '1', 10);
     t1.join();
     t2.join();
 
-
-    std::cout << "Amount: " << myAmount << "\n";
     return 0;
 }
 // There are so many try_lock function
