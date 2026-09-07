@@ -23,7 +23,8 @@ int myAmount{};
 std::timed_mutex m;
 
 void increment(int id){
-    if (m.try_lock_for(std::chrono::seconds(2))){
+    auto now = std::chrono::steady_clock::now();
+    if(m.try_lock_until(now + std::chrono::seconds(2))){
         ++myAmount;
         std::this_thread::sleep_for(std::chrono::seconds(1));
         std::cout << "Thread " << id << " Entered\n";
