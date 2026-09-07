@@ -1,60 +1,49 @@
+//Topic: Timed Mutex In C++ Threading (std::timed_mutex)
+// We have learneed Mutex, Race Condition, Critical Section
+// Notes:
+// std::timed_mutex is blocked till timeout_time or the lock is aquired and returns true if success
+// otherwise false.
+// Member Function:
+// a. lock
+// b. try_lock
+// c. try_lock_for   ---\ These two functions makes it different for mutex.
+// d. try_lock_until ---/
+// e. unlock
+
+// Examples: try_lock_for();
+// Waits until specific timeout_duration has elapsed or the lock is aquired, whichever comes first.
+// On successful lock acquisition returns true, otherwise returns false.
+
 #include <iostream>
 #include <thread>
 #include <mutex>
 #include <chrono>
 
-// std::try_lock() in c++20 Threading
-// std::try_lock() tries to lock all the lockable objects passed in it one by one in given order.
-// Syntax: std::try_lock(m1, m2, m3, m4, m5, ..., mn);
+int myAmount{};
+std::timed_mutex m;
 
-// On success this function returns -1 otherwise it will return 0-based mutex index number which it could not lock.
-// If it fails to lock any of the mutex then it will release all the mutex it locked before.
-// If a call to try_lcok results in an exception, unlock is called for any locked objects before rethrowing
-
-int x{}, y{};
-std::mutex m1, m2;
-
-void seconds_work(int seconds){
-    std::this_thread::sleep_for(std::chrono::seconds(seconds));
-}
-
-void xy_increment(int& x_y, std::mutex& m, const char* desc){
-    for (int i{}; i < 5; ++i){
-        m.lock();
-        ++x_y;
-        std::cout << desc << " " << x_y << "\n";
+void increment(int id){
+    if (m.try_lock_for(std::chrono::seconds(2))){
+        ++myAmount;
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+        std::cout << "Thread " << id << " Entered\n";
         m.unlock();
-        seconds_work(1);
+    }
+    else{
+        std::cout << "Thread " << id << " Couldn't Enter\n";
     }
 }
-
-void consume_xy(){
-    int useCount{5};
-    int x_y_sum{};
-    while(useCount){
-        int lockResult = std::try_lock(m1, m2);
-        if (lockResult == -1){
-            if (x && y){
-                --useCount;
-                x_y_sum += x + y;
-                x = y = 0;
-                std::cout <<  "x + y : " << x_y_sum << "\n";
-            }
-            m1.unlock();
-            m2.unlock();
-        }
-    }
-}
-
 
 int main(){
-    std::thread t1(xy_increment, std::ref(x), std::ref(m1), "x");
-    std::thread t2(xy_increment, std::ref(y), std::ref(m2), "y");
-    std::thread t3(consume_xy);
+
+    std::thread t1(increment, 1);
+    std::thread t2(increment, 2);
 
     t1.join();
     t2.join();
-    t3.join();
+
+
+    std::cout << "Amount: " << myAmount << "\n";
     return 0;
 }
 // There are so many try_lock function
